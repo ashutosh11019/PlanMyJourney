@@ -62,34 +62,51 @@ const CreateTrip = () => {
     }
 
     setLoading(true);
-    // Replace the values in the AI_PROMPT
     const FINAL_PROMPT = AI_PROMPT
       .replaceAll('{location}', formData?.location?.label)
       .replaceAll('{noOfDays}', formData?.noOfDays)
       .replaceAll('{noOfTraveler}', formData?.noOfTraveler)
-      .replaceAll('{budget}', formData?.budget)
+      .replaceAll('{budget}', formData?.budget);
 
-    // console.log(FINAL_PROMPT)
+    try {
+      const result = await chatSession.sendMessage(FINAL_PROMPT);
+      // The .text() method can be empty if the response was blocked or the model returned no text.
+      // It will throw an error if the prompt itself was blocked.
+      const responseText = result.response.text();
 
-    const result = await chatSession.sendMessage(FINAL_PROMPT);
-    // console.log(result?.response?.text());
-    setLoading(false);
-    SavePromtResponse(result?.response?.text());
+      if (!responseText) {
+        toast.error("The AI returned an empty response. This might be due to a safety block. Please try again.");
+        console.error("Empty or blocked response from AI:", result.response);
+        return;
+      }
+
+      await SavePromtResponse(responseText);
+    } catch (error) {
+      console.error("Error generating trip:", error);
+      toast.error("An error occurred while generating your trip. Please check the console for details.");
+    } finally {
+      setLoading(false);
+    }
   }
 
   const SavePromtResponse = async (response) => {
-    setLoading(true);
     const userEmail = JSON.parse(localStorage.getItem('user'))?.email;
     const docId = uuidv4();
-    // Save the response to the database
-    await setDoc(doc(db, "AITrips", docId), {
-      id: docId,
-      userEmail: userEmail,
-      userInput: formData,
-      tripData: JSON.parse(response),
-    });
-    setLoading(false);
-    navigate(`/view-trip/${docId}`);
+    try {
+      // The AI response for JSON is often wrapped in ```json ... ```, which needs to be removed before parsing.
+      const cleanedResponse = response.replace(/^```json/, '').replace(/```$/, '').trim();
+      const tripData = JSON.parse(cleanedResponse);
+      await setDoc(doc(db, "AITrips", docId), {
+        id: docId,
+        userEmail: userEmail,
+        userInput: formData,
+        tripData: tripData,
+      });
+      navigate(`/view-trip/${docId}`);
+    } catch (error) {
+      console.error("Error parsing or saving trip data:", error);
+      toast.error("There was an issue processing the AI's response. It might be malformed.");
+    }
   }
   // Get User Profile
   const GetUserProfile = (response) => {
@@ -100,6 +117,7 @@ const CreateTrip = () => {
       }
     }).then((res) => {
       localStorage.setItem('user', JSON.stringify(res.data));
+      window.dispatchEvent(new Event('user-changed'));
       OnGenerateTrip();
       setOpenDialog(false);
     })

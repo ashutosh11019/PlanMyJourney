@@ -7,8 +7,8 @@ const LoginDialog = ({ openDialog, setOpenDialog, login }) => {
     return (
         <Dialog open={openDialog} onOpenChange={(v) => setOpenDialog(v)}>
             <DialogContent className="bg-white p-8 rounded-lg shadow-xl">
-                <DialogHeader className="">
-                    <DialogTitle className="text-2xl font-bold flex justify-center items-center font-geist"><img src="logo.png" className="w-16 h-12 mr-2" /> MakeMyJourney.ai</DialogTitle>
+                <DialogHeader>
+                    <DialogTitle className="text-2xl font-bold flex justify-center items-center font-geist"><img src="/logo.png" alt="Logo" className="w-16 h-12 mr-2" /> MakeMyJourney.ai</DialogTitle>
                 </DialogHeader>
                 <DialogDescription className="text-center font-geist">
                     Please log in with your Google account for a secure and seamless experience.

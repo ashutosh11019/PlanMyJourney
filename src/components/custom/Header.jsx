@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { Button } from '../ui/button'
 import { LogIn, LogOut } from 'lucide-react'
 import {
@@ -18,6 +18,21 @@ const Header = () => {
   const [user, setUser] = useState(JSON.parse(localStorage.getItem('user')));
   const [openDialog, setOpenDialog] = useState(false);
   const location = useLocation();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const handleStorageChange = () => {
+      const userFromStorage = localStorage.getItem('user');
+      setUser(userFromStorage ? JSON.parse(userFromStorage) : null);
+    };
+
+    // Custom event to handle login/logout from other components in the same tab
+    window.addEventListener('user-changed', handleStorageChange);
+
+    return () => {
+      window.removeEventListener('user-changed', handleStorageChange);
+    };
+  }, []);
 
   // Google Login
   const userLogin = useGoogleLogin({
@@ -35,14 +50,15 @@ const Header = () => {
     }).then((res) => {
       localStorage.setItem('user', JSON.stringify(res.data));
       setUser(res.data);
+      window.dispatchEvent(new Event('user-changed'));
     })
   }
 
   const userLogout = () => {
     googleLogout();
     localStorage.removeItem('user');
-    setUser(null);
-    window.location.href = '/';
+    window.dispatchEvent(new Event('user-changed'));
+    navigate('/');
   }
 
   return (
@@ -59,14 +75,14 @@ const Header = () => {
         {user ?
           <>
 
-            {location.pathname !== '/my-trips' ?(
+            {location.pathname !== '/my-trips' ? (
               <Link to="/my-trips">
                 <Button className="text-sm md:text-base py-2 px-6 rounded-lg text-gray-800 bg-yellow-400  hover:bg-yellow-500 hover:shadow-lg transition duration-300">
                   My Trips
                 </Button>
               </Link>
-            ):
-            <Link to="/create-trip">
+            ) :
+              <Link to="/create-trip">
                 <Button className="text-sm md:text-base py-2 px-6 rounded-lg text-gray-800 bg-yellow-400  hover:bg-yellow-500 hover:shadow-lg transition duration-300">
                   + Create Trip
                 </Button>
